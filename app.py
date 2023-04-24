@@ -2,43 +2,50 @@ import dash
 import dash_core_components as dcc
 import dash_bootstrap_components as dbc  # pip install dash-bootstrap-components
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.express as px
 
 import pandas as pd
 
-df = pd.read_csv('assets/data/gapminderDataFiveYear.csv')
+from dash import dash_table
 
-dash_app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+# df = pd.read_csv('assets/data/gapminderDataFiveYear.csv')
+
+dash_app = dash.Dash(__name__)
 app = dash_app.server
 
+df = pd.read_csv('Hi.csv', header=0)
+
 dash_app.layout = html.Div([
-    dcc.Graph(id='graph-with-slider'),
-    dcc.Slider(
-        id='year-slider',
-        min=df['year'].min(),
-        max=df['year'].max(),
-        value=df['year'].min(),
-        marks={str(year): str(year) for year in df['year'].unique()},
-        step=None
-    )
+    dash_table.DataTable(
+        id='computed-table',
+        columns=[
+            {'name': 'name', 'id': 'input-data-1'},
+            {'name': 'age', 'id': 'input-data-2'}
+        ],
+        data=[{'input-data-1': df.iloc[i]['Name'], 'input-data-2': df.iloc[i]['Age']} for i in range(df.shape[0])],
+        editable=True,
+    ),
 ])
 
 
 @dash_app.callback(
-    Output('graph-with-slider', 'figure'),
-    Input('year-slider', 'value'))
-
-def update_figure(selected_year):
-    filtered_df = df[df.year == selected_year]
-
-    fig = px.scatter(filtered_df, x="gdpPercap", y="lifeExp",
-                     size="pop", color="continent", hover_name="country",
-                     log_x=True, size_max=55, template="plotly_dark")
-
-    fig.update_layout(transition_duration=500)
-
-    return fig
+    Output('computed-table', 'data'),
+    Input('computed-table', 'data_timestamp'),
+    State('computed-table', 'data'))
+def update_columns(timestamp, rows):
+    Name = []
+    Age = []
+    i = 0
+    for row in rows:
+        try:
+            Name.append(row['input-data-1'])
+            Age.append(row['input-data-2'])
+        except:
+            print('Error')
+    df_temp = pd.DataFrame(data={'Name': Name, 'Age': Age})
+    df_temp.to_csv('Hi.csv')
+    return rows
 
 
 if __name__ == '__main__':
